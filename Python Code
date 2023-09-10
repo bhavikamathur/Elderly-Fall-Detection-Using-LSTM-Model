@@ -1,0 +1,167 @@
+from google.colab import drive
+drive.mount('/content/drive')
+
+import os
+import csv
+from itertools import chain
+
+def txt_to_csv(input_file, output_file, delimiter=','):
+    try:
+        with open(input_file, 'r') as txt_file:
+            lines = txt_file.readlines()
+    except FileNotFoundError:
+        print(f"File '{input_file}' not found.")
+        return
+
+    data = [line.strip().split(delimiter) for line in lines]
+
+    try:
+        with open(output_file, 'w', newline='') as csv_file:
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerows(data)
+        print(f"Successfully converted '{input_file}' to '{output_file}'.")
+    except Exception as e:
+        print(f"An error occurred while writing to CSV file: {e}")
+
+def convert_folder_txt_to_csv(folder_path):
+  for subfolder_number in range(0, 5):
+      subfolder_path = os.path.join(folder_path+'/Test_'+ str(subfolder_number+1))
+      if not os.path.exists(subfolder_path):
+          print(f"Sub-subfolder '{subfolder_number}' not found at path '{subfolder_path}'. Skipping.")
+          continue
+      print(f"Accessing sub-subfolder: {subfolder_path}")
+
+      for filename in os.listdir(subfolder_path):
+          if filename.endswith('39.txt') or filename.endswith('40.txt'):
+              input_file = os.path.join(subfolder_path, filename)
+              output_file = os.path.join(subfolder_path, f"{filename.rsplit('.', 1)[0]}.csv")
+              txt_to_csv(input_file, output_file, delimiter='\t')
+
+def access_folders(root_path):
+    if not os.path.exists(root_path):
+        print(f"Folder '{root_path}' not found. Exiting program.")
+        return
+    print(f"Accessing main folder: {root_path}")
+
+    for folder_number in chain(range(101, 116)):
+        folder_name = str(folder_number)
+        folder_path = os.path.join(root_path, folder_name)
+        if not os.path.exists(folder_path):
+            print(f"Subfolder '{folder_name}' not found at path '{folder_path}'. Skipping.")
+            continue
+        print(f"Accessing subfolder: {folder_path}")
+        tester_path = os.path.join(folder_path, 'Testler Export')
+        if not os.path.exists(tester_path):
+            print(f"Subfolder 'Testler Export' not found at path '{tester_path}'. Skipping.")
+            continue
+        print(f"Accessing subfolder: {tester_path}")
+        for tester_folder in os.listdir(tester_path):
+            tester_folder_path = os.path.join(tester_path, tester_folder)
+            if not os.path.isdir(tester_folder_path):
+                continue
+            print(f"Accessing sub-subfolder: {tester_folder_path}")
+
+            convert_folder_txt_to_csv(tester_folder_path)
+
+if __name__ == '__main__':
+    main_folder_path = '/content/drive/MyDrive/Tests'  # Replace with the actual path to the main folder
+    access_folders(main_folder_path)
+
+
+import csv
+import pandas as pd
+import os
+
+subj_N = 15
+act_N = 20
+rep_N = 5
+
+folder_path = '/content/drive/MyDrive/Tests/'
+
+for sub in range(9, 10, 1):
+    print(f'loading subject {sub+1}')
+    for act in range(act_N):
+        print(f'loading activity {act+1}')
+        for rep in range(rep_N):
+            print(f'loading repetition {rep+1}')
+            for folder_num in range(901, 920 + 1):
+                ankle_file_path = os.path.join(folder_path, f'1{sub+1}', 'Testler Export', f'{folder_num}', f'Test_{rep+1}', '340539.csv')
+                knee_file_path = os.path.join(folder_path, f'1{sub+1}', 'Testler Export', f'{folder_num}', f'Test_{rep+1}', '340540.csv')
+                load_data_ankle = pd.read_csv(ankle_file_path, delimiter="\t")
+                load_data_knee = pd.read_csv(knee_file_path, delimiter="\t")
+                dfk_split = load_data_knee['// Start Time: 0'].str.split(',', expand=True)
+                dfa_split = load_data_ankle['// Start Time: 0'].str.split(',', expand=True)
+                sliced_knee= dfk_split.iloc[3:, 9:18]
+                sliced_ankle= dfa_split.iloc[3:, 9:18]
+                result = pd.concat([sliced_knee, sliced_ankle], axis=1)
+                output_folder = '/content/drive/MyDrive/Test_CSV_Combined'
+                os.makedirs(output_folder, exist_ok=True)
+                output_file = os.path.join(output_folder, f's{sub+1}_a{act+1}_t{rep+1}.csv')
+                result.to_csv(output_file, index=False)
+                load_output = pd.read_csv(output_file, sep=',', engine='python')
+
+
+
+import pandas as pd
+import os
+
+csv_directory = '/content/drive/MyDrive/Test_CSV_Combined'
+csv_files = [file for file in os.listdir(csv_directory) if file.endswith('.csv')]
+for csv_file in csv_files:
+    csv_path = os.path.join(csv_directory, csv_file)
+    df = pd.read_csv(csv_path)
+    rows, columns = df.shape
+    print(f"File: {csv_file} | Rows: {rows} | Columns: {columns}")
+import pandas as pd
+import os
+csv_directory = "/content/drive/MyDrive/Test_CSV_Combined"
+max_row_count = 0
+min_row_count = float("inf")
+max_row_file = None
+min_row_file = None
+for filename in os.listdir(csv_directory):
+    if filename.endswith(".csv"):
+        csv_file_path = os.path.join(csv_directory, filename)
+        df = pd.read_csv(csv_file_path)
+        if df.shape[0] > max_row_count:
+            max_row_count = df.shape[0]
+            max_row_file = filename
+        if df.shape[0] < min_row_count:
+            min_row_count = df.shape[0]
+            min_row_file = filename
+
+print({max_row_count})
+print({min_row_count})
+
+import os
+import csv
+import numpy as np
+import pandas as pd
+
+input_folder_path = "/content/drive/MyDrive/Test_CSV_Combined"
+output_folder_path = "/content/drive/MyDrive/Test_CSV_Combined_padded"
+row_limit = 583
+columns = 18
+
+if not os.path.exists(output_folder_path):
+    os.makedirs(output_folder_path)
+
+for filename in os.listdir(input_folder_path):
+    if filename.endswith(".csv"):
+        input_file_path = os.path.join(input_folder_path, filename)
+        df = pd.read_csv(input_file_path)
+        no_of_rows = df.shape[0]
+        if no_of_rows < row_limit:
+            p2 = row_limit - no_of_rows
+            p3 = np.zeros((p2, columns))
+            zero_df = pd.DataFrame(p3, columns=range(columns))
+            df = pd.concat([df, zero_df], axis=1)
+            output_file_path = os.path.join(output_folder_path, filename)
+            df.to_csv(output_file_path, index=False)
+
+print("CSV padding completed.")
+
+file_path= '/content/drive/MyDrive/Test_CSV_Combined_padded/s10_a10_t1.csv'
+df = pd.read_csv(file_path)
+df.tail(10)
+df.shape
